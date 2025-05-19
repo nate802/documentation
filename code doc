@@ -1,0 +1,327 @@
+/**
+ * TitleScene handles the title screen for the game, including background music, animations, and transitions to the game scene.
+ */
+const TitleScene = {
+    key: 'title',
+    
+    /**
+     * Preloads assets for the title screen including the title image, background music, and spritesheets.
+     */
+    preload: function() {
+        this.load.image('title', 'assets/title.png');
+        this.load.audio('bgMusic', 'assets/music.mp3');
+        this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+        this.load.image('star', 'assets/diamond.png');
+    },
+
+    /**
+     * Creates and displays title screen elements including animations, background music, and start instructions.
+     */
+    create: function() {
+        // Title image
+        const titleImage = this.add.image(450, 425, 'title');
+        titleImage.setDisplaySize(900, 850);
+        titleImage.setAlpha(0);
+
+        // Fade-in animation for title image
+        this.tweens.add({
+            targets: titleImage,
+            alpha: 1,
+            duration: 2000,
+            ease: 'Power2'
+        });
+
+        // Background music
+        this.bgMusic = this.sound.add('bgMusic', { loop: true });
+        this.bgMusic.play();
+
+        // "Press SPACE to Start" text with animation
+        const startText = this.add.text(450, 600, 'Press SPACE to Start', { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+        startText.setAlpha(0);
+
+        // Animation for the start text
+        this.tweens.add({
+            targets: startText,
+            alpha: 1,
+            y: 590,
+            duration: 1500,
+            ease: 'Bounce',
+            delay: 1000,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Prisoner sprite with animation
+        const prisoner = this.add.sprite(450, 500, 'dudes');
+        prisoner.setScale(2);
+        this.anims.create({
+            key: 'dance',
+            frames: this.anims.generateFrameNumbers('dudes', { start: 15, end: 18 }),
+            frameRate: 8,
+            repeat: -1
+        });
+        prisoner.play('dance');
+
+        // Falling diamonds
+        const diamonds = this.add.group();
+        const spawnDiamond = () => {
+            const x = Phaser.Math.Between(50, 850);
+            const diamond = this.add.image(x, -20, 'star');
+            diamond.setScale(0.3);
+            diamond.setAlpha(0.7);
+            diamonds.add(diamond);
+            
+            this.tweens.add({
+                targets: diamond,
+                y: 900,
+                rotation: 2,
+                duration: Phaser.Math.Between(3000, 6000),
+                onComplete: () => {
+                    diamond.destroy();
+                }
+            });
+        };
+        
+        // Spawns diamonds at regular intervals
+        this.time.addEvent({
+            delay: 500,
+            callback: spawnDiamond,
+            loop: true
+        });
+
+        // Wait for the player to press SPACE to transition to the game scene
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.sound.stopAll();
+            this.cameras.main.fadeOut(1000, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('gameScene');
+            });
+        });
+    }
+};
+
+/**
+ * GameScene is the main game scene, handling player movement, interactions, and game logic.
+ */
+const GameScene = {
+    key: 'gameScene',
+    preload: preload,
+    create: create,
+    update: update
+};
+
+/**
+ * WinScene displays the win screen after completing the game, showing victory animations and music.
+ */
+const WinScene = {
+    key: 'win',
+    
+    /**
+     * Preloads assets for the win screen including the win image and victory sound.
+     */
+    preload: function() {
+        this.load.image('win', 'assets/win.png');
+        this.load.audio('winSound', 'assets/win.mp3');
+        this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+    },
+
+    /**
+     * Creates and displays elements for the win screen including animations, win text, and falling diamonds.
+     */
+    create: function() {
+        // Win image
+        const winImage = this.add.image(450, 425, 'win');
+        winImage.setDisplaySize(900, 850);
+
+        // Victory animation for prisoner
+        const prisoner = this.add.sprite(700, 680, 'dudes');
+        prisoner.setScale(2);
+        this.anims.create({
+            key: 'victory-jump',
+            frames: this.anims.generateFrameNumbers('dudes', { start: 4, end: 4 }),
+            frameRate: 10
+        });
+        
+        // Victory jump animation
+        this.tweens.add({
+            targets: prisoner,
+            y: 600, 
+            duration: 800,
+            ease: 'Power1',
+            yoyo: true,
+            repeat: -1
+        });
+        prisoner.play('victory-jump');
+
+        // Falling diamonds on the win screen
+        const fallingDiamonds = this.add.group();
+        const spawnDiamond = () => {
+            const x = Phaser.Math.Between(50, 850);
+            const diamond = this.add.image(x, -20, 'star');
+            diamond.setScale(0.3);
+            diamond.setAlpha(0.7);
+            fallingDiamonds.add(diamond);
+            
+            this.tweens.add({
+                targets: diamond,
+                y: 900,
+                rotation: 2,
+                duration: Phaser.Math.Between(3000, 6000),
+                onComplete: () => {
+                    diamond.destroy();
+                }
+            });
+        };
+        
+        // Spawns diamonds at regular intervals
+        this.time.addEvent({
+            delay: 500,
+            callback: spawnDiamond,
+            loop: true
+        });
+
+        // Creates a display for the victory time
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        this.add.text(450, 550, `You escaped with ${minutes}:${seconds < 10 ? '0' : ''}${seconds} left!`, { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+
+        // Play win sound
+        const winSound = this.sound.add('winSound');
+        winSound.play();
+
+        // Instruction to play again
+        this.add.text(450, 600, 'Press SPACE to Play Again', { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+
+        // Wait for SPACE press to restart the game
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.sound.stopAll();
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            this.scene.start('title');
+        });
+    }
+};
+
+/**
+ * GameOverScene is the scene displayed when the player loses the game, showing the game over image and restart option.
+ */
+const GameOverScene = {
+    key: 'gameOver',
+    
+    /**
+     * Preloads assets for the game over screen including the game over image and sound.
+     */
+    preload: function() {
+        this.load.image('gameOver', 'assets/gameover.png');
+        this.load.audio('gameOverSound', 'assets/music.mp3');
+        this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+    },
+
+    /**
+     * Creates and displays the game over screen, including animations and sound.
+     */
+    create: function() {
+        // Game over image
+        const gameOverImage = this.add.image(450, 425, 'gameOver');
+        gameOverImage.setDisplaySize(900, 850);
+
+        // Play game over sound
+        const gameOverSound = this.sound.add('gameOverSound');
+        gameOverSound.play();
+
+        // Create prisoner sprite and animate it
+        const prisoner = this.add.sprite(450, 500, 'dudes');
+        prisoner.setScale(2);
+        prisoner.angle = 90;
+        
+        // Animate prisoner
+        this.tweens.add({
+            targets: prisoner,
+            scaleY: 1.9,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Instruction to restart the game
+        this.add.text(450, 600, 'Press SPACE to Restart', { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+
+        // Wait for SPACE press to restart the game
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.sound.stopAll();
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            this.scene.start('title');
+        });
+    }
+};
+
+/**
+ * Configuration for the Phaser game instance.
+ */
+const config = {
+    type: Phaser.AUTO,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        parent: 'phaser-game',
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 900,
+        height: 810
+    },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: false
+        }
+    },
+    scene: [TitleScene, GameScene, GameOverScene, WinScene],
+    render: {
+        pixelArt: false,
+        antialias: true,
+        roundPixels: true
+    }
+};
+
+// Initialize Phaser game
+var player;
+var stars;
+var bombs;
+var platforms;
+var cursors;
+var score = 0;
+var lives = 3;
+var gameOver = false;
+var scoreText;
+var livesText;
+var timeLeft = 0; 
+var timerText;
+var countdownTimer;
+var game = new Phaser.Game(config);
+
+ 
+
+ 
+
+Intructions
+
+1. left and right arrow keys to move
+
+2. space to jump onto platforms 
+
+3. collect all the diamonds and win!
