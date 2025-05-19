@@ -317,11 +317,3 @@ var game = new Phaser.Game(config);
  
 
  
-
-Intructions
-
-1. left and right arrow keys to move
-
-2. space to jump onto platforms 
-
-3. collect all the diamonds and win!
