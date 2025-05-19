@@ -1,0 +1,539 @@
+const TitleScene = {
+    key: 'title',
+    preload: function() {
+        this.load.image('title', 'assets/title.png');
+        this.load.audio('bgMusic', 'assets/music.mp3');
+        this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+        this.load.image('star', 'assets/diamond.png');
+    },
+    create: function() {
+        const titleImage = this.add.image(450, 425, 'title');
+        titleImage.setDisplaySize(900, 850);
+        titleImage.setAlpha(0);
+
+        this.tweens.add({
+            targets: titleImage,
+            alpha: 1,
+            duration: 2000,
+            ease: 'Power2'
+        });
+
+        this.bgMusic = this.sound.add('bgMusic', { loop: true });
+        this.bgMusic.play();
+
+        const startText = this.add.text(450, 600, 'Press SPACE to Start', { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+        startText.setAlpha(0);
+
+        this.tweens.add({
+            targets: startText,
+            alpha: 1,
+            y: 590,
+            duration: 1500,
+            ease: 'Bounce',
+            delay: 1000,
+            yoyo: true,
+            repeat: -1
+        });
+
+      
+        const prisoner = this.add.sprite(450, 500, 'dudes');
+        prisoner.setScale(2);
+        
+        this.anims.create({
+            key: 'dance',
+            frames: this.anims.generateFrameNumbers('dudes', { start: 15, end: 18 }),
+            frameRate: 8,
+            repeat: -1
+        });
+
+        prisoner.play('dance');
+
+       
+        const diamonds = this.add.group();
+        const spawnDiamond = () => {
+            const x = Phaser.Math.Between(50, 850);
+            const diamond = this.add.image(x, -20, 'star');
+            diamond.setScale(0.3);
+            diamond.setAlpha(0.7);
+            diamonds.add(diamond);
+            
+            this.tweens.add({
+                targets: diamond,
+                y: 900,
+                rotation: 2,
+                duration: Phaser.Math.Between(3000, 6000),
+                onComplete: () => {
+                    diamond.destroy();
+                }
+            });
+        };
+        
+        this.time.addEvent({
+            delay: 500,
+            callback: spawnDiamond,
+            loop: true
+        });
+
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.sound.stopAll();
+            this.cameras.main.fadeOut(1000, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('gameScene');
+            });
+        });
+    }
+};
+
+const GameScene = {
+    key: 'gameScene',
+    preload: preload,
+    create: create,
+    update: update
+};
+
+const WinScene = {
+    key: 'win',
+    preload: function() {
+        this.load.image('win', 'assets/win.png');
+        this.load.audio('winSound', 'assets/win.mp3');
+        this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+    },
+    create: function() {
+        const winImage = this.add.image(450, 425, 'win');
+        winImage.setDisplaySize(900, 850);
+        
+       
+        const prisoner = this.add.sprite(700, 680, 'dudes');
+        prisoner.setScale(2);
+        
+     
+        this.anims.create({
+            key: 'victory-jump',
+            frames: this.anims.generateFrameNumbers('dudes', { start: 4, end: 4 }),
+            frameRate: 10
+        });
+        
+       
+      
+        this.tweens.add({
+            targets: prisoner,
+            y: 600, 
+            duration: 800,
+            ease: 'Power1',
+            yoyo: true,
+            repeat: -1
+        });
+        
+        prisoner.play('victory-jump');
+        
+      
+        const fallingDiamonds = this.add.group();
+        const spawnDiamond = () => {
+            const x = Phaser.Math.Between(50, 850);
+            const diamond = this.add.image(x, -20, 'star');
+            diamond.setScale(0.3);
+            diamond.setAlpha(0.7);
+            fallingDiamonds.add(diamond);
+            
+            this.tweens.add({
+                targets: diamond,
+                y: 900,
+                rotation: 2,
+                duration: Phaser.Math.Between(3000, 6000),
+                onComplete: () => {
+                    diamond.destroy();
+                }
+            });
+        };
+        
+        this.time.addEvent({
+            delay: 500,
+            callback: spawnDiamond,
+            loop: true
+        });
+
+        const diamonds = this.add.group();
+        const baseY = 750; 
+        const spacing = 25; 
+        
+      
+        for (let row = 0; row < 3; row++) {
+            const rowY = baseY - (row * 15); 
+            const numDiamonds = 7 - row; 
+            
+            for (let i = 0; i < numDiamonds; i++) {
+                const x = 400 + (i * spacing) - ((numDiamonds-1) * spacing/2) + Phaser.Math.Between(-5, 5);
+                const y = rowY + Phaser.Math.Between(-5, 5);
+                const diamond = this.add.image(x, y, 'star');
+                diamond.setScale(0.3);
+                diamond.setAngle(Phaser.Math.Between(-20, 20));
+                diamonds.add(diamond);
+
+               
+                this.tweens.add({
+                    targets: diamond,
+                    alpha: 0.7,
+                    scaleX: 0.35,
+                    scaleY: 0.35,
+                    duration: 1000,
+                    yoyo: true,
+                    repeat: -1,
+                    delay: (row * numDiamonds + i) * 100
+                });
+            }
+        }
+
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        this.add.text(450, 550, `You escaped with ${minutes}:${seconds < 10 ? '0' : ''}${seconds} left!`, { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+
+        const winSound = this.sound.add('winSound');
+        winSound.play();
+
+        this.add.text(450, 600, 'Press SPACE to Play Again', { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.sound.stopAll();
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            this.scene.start('title');
+        });
+    }
+};
+
+const GameOverScene = {
+    key: 'gameOver',
+    preload: function() {
+        this.load.image('gameOver', 'assets/gameover.png');
+        this.load.audio('gameOverSound', 'assets/music.mp3');
+        this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+    },
+    create: function() {
+        const gameOverImage = this.add.image(450, 425, 'gameOver');
+        gameOverImage.setDisplaySize(900, 850);
+
+        const gameOverSound = this.sound.add('gameOverSound');
+        gameOverSound.play();
+
+      
+        const prisoner = this.add.sprite(450, 500, 'dudes');
+        prisoner.setScale(2);
+        prisoner.angle = 90; 
+        
+ 
+        this.tweens.add({
+            targets: prisoner,
+            scaleY: 1.9,
+            duration: 1000,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        this.add.text(450, 600, 'Press SPACE to Restart', { 
+            fontSize: '32px', 
+            fill: '#fff' 
+        }).setOrigin(0.5);
+
+        this.input.keyboard.once('keydown-SPACE', () => {
+            this.sound.stopAll();
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            this.scene.start('title');
+        });
+    }
+};
+
+const config = {
+    type: Phaser.AUTO,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        parent: 'phaser-game',
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 900,
+        height: 810
+    },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 300 },
+            debug: false
+        }
+    },
+    scene: [TitleScene, GameScene, GameOverScene, WinScene],
+    render: {
+        pixelArt: false,
+        antialias: true,
+        roundPixels: true
+    }
+};
+
+var player;
+var stars;
+var bombs;
+var platforms;
+var cursors;
+var score = 0;
+var lives = 3;
+var gameOver = false;
+var scoreText;
+var livesText;
+var timeLeft = 0; 
+var timerText;
+var countdownTimer;
+var game = new Phaser.Game(config);
+
+function preload() {
+    this.load.image('skys', 'assets/background.png');
+    this.load.image('ground', 'assets/platform.png');
+    this.load.image('star', 'assets/diamond.png', { frameWidth: 10, frameHeight: 10 });
+    this.load.image('bomb', 'assets/bombs.png', { frameWidth: 30, frameHeight: 30 });
+    this.load.spritesheet('dudes', 'assets/prisoner.png', { frameWidth: 50, frameHeight: 50 });
+    this.load.audio('diamond', 'assets/diamond.flac');
+    this.load.audio('gameMusic', 'assets/game.flac');
+}
+
+function create() {
+    this.gameMusic = this.sound.add('gameMusic', { loop: true });
+    this.gameMusic.play();
+    cursors = this.input.keyboard.createCursorKeys();
+    let bg = this.add.tileSprite(450, 425, 950, 850, 'skys');
+    bg.setScrollFactor(0.2);
+    
+    platforms = this.physics.add.staticGroup();
+    const gradient = this.add.graphics();
+    gradient.fillGradientStyle(0x666666, 0x666666, 0x333333, 0x333333, 1);
+    gradient.fillRect(0, 0, 900, 810);
+    gradient.setScrollFactor(0);
+    gradient.setAlpha(0.2);
+    platforms.create(780, 670, 'ground');
+    platforms.create(120, 670, 'ground');
+    platforms.create(430, 570, 'ground').setScale(1).refreshBody();
+    platforms.create(400, 880, 'ground').setScale(5).refreshBody();
+    platforms.create(140, 450, 'ground');
+    platforms.create(700, 450, 'ground');
+    platforms.create(120, 280, 'ground');
+    platforms.create(750, 280, 'ground');
+   platforms.create(430, 90, 'ground') .setScale(1.5).refreshBody(); 
+    platforms.create(70, 80, 'ground');
+    platforms.create(790, 80, 'ground');
+     platforms.create(440, 350, 'ground').setScale(1).refreshBody();
+
+    player = this.physics.add.sprite(200, 750, 'dudes');
+    player.setScale(1.1);
+    player.body.setSize(30, 50); 
+    
+    player.setBounce(0.2);
+    
+   
+    const instructions = [
+        'Controls: ← → Move   SPACE Jump',
+        'Collect diamonds and avoid bombs!'
+    ];
+    
+    instructions.forEach((text, i) => {
+        this.add.text(450, 30 + (i * 30), text, {
+            fontSize: '24px',
+            fill: '#fff',
+            stroke: '#000',
+            strokeThickness: 4,
+            align: 'center'
+        }).setOrigin(0.5);
+    });
+    player.setCollideWorldBounds(true);
+
+    this.anims.create({
+        key: 'left',
+        frames: this.anims.generateFrameNumbers('dudes', { start: 30, end: 33 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'turn',
+        frames: [{ key: 'dudes', frame: 4 }],
+        frameRate: 20
+    });
+
+    this.anims.create({
+        key: 'right',
+        frames: this.anims.generateFrameNumbers('dudes', { start: 15, end: 18 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+
+    stars = this.physics.add.group();
+
+    const platformPositions = [];
+    platforms.children.iterate(function(platform) {
+        platformPositions.push({
+            x: platform.x,
+            y: platform.y - 50 
+        });
+    });
+
+    platforms.children.iterate(function(platform) {
+
+        if (platform.y !== 880 && 
+            !(platform.x === 430 && platform.y === 100) &&
+            !(platform.x === 70 && platform.y === 80) &&
+            !(platform.x === 790 && platform.y === 80) &&
+            !(platform.x === 430 && platform.y === 90) &&
+            !(platform.x === 430 && platform.y === 350)) { 
+            for (let i = 0; i < 5; i++) {
+                const offset = [-100, -50, 0, 50, 100][i]; 
+                const star = stars.create(platform.x + offset, platform.y - 50, 'star');
+                star.setScale(0.3);
+                star.setBounceY(0);
+            }
+        }
+    });
+
+    bombs = this.physics.add.group();
+    scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#fff' });
+    livesText = this.add.text(16, 50, 'lives: 3', { fontSize: '32px', fill: '#fff' });
+    timerText = this.add.text(880, 16, 'Time: 1:30', { 
+        fontSize: '20px', 
+        fill: '#fff',
+        fontStyle: 'bold',
+        stroke: '#000',
+        strokeThickness: 3
+    }).setOrigin(1, 0);
+
+    timeLeft = 80;
+    countdownTimer = this.time.addEvent({
+        delay: 1000,
+        callback: updateTimer,
+        callbackScope: this,
+        loop: true
+    });
+
+    this.physics.add.collider(player, platforms);
+    this.physics.add.collider(stars, platforms);
+    this.physics.add.collider(bombs, platforms);
+
+    this.physics.add.overlap(player, stars, collectStar, null, this);
+    this.physics.add.collider(player, bombs, hitBomb, null, this);
+
+    this.tweens.add(
+        {
+            targets: bombs,
+            duration: 1000,
+            repeat: -1,
+            yoyo: true,
+            angle: '+=360',
+            x: '+=200',
+            y: '-=200',
+            alpha: '0.5',
+            scale: '-=0.25'
+
+        }
+    );
+}
+
+function update() {
+    if (gameOver) {
+        return;
+    }
+
+    if (cursors.left.isDown) {
+        player.setVelocityX(-170);
+        player.anims.play('left', true);
+    }
+    else if (cursors.right.isDown) {
+        player.setVelocityX(170);
+        player.anims.play('right', true);
+    }
+    else {
+        player.setVelocityX(0);
+        player.anims.play('turn', true);
+    }
+
+    if (cursors.space.isDown && player.body.touching.down) {
+        player.setVelocityY(-330);
+    }
+}
+
+function collectStar(player, star) {
+    if (!this.starCounter) {
+        this.starCounter = 0;
+    }
+    
+    star.disableBody(true, true);
+    this.sound.play('diamond', { volume: 0.05 });
+    score += 20;
+    scoreText.setText('Score: ' + score);
+    this.starCounter++;
+
+    if (stars.countActive(true) === 0) {
+        this.gameMusic.stop();
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.start('win');
+        });
+    }
+
+    if (this.starCounter >= 2) {
+        var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+        var bomb = bombs.create(x, 16, 'bomb');
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+        bomb.allowGravity = false;
+        bomb.setScale(1.0);
+        this.starCounter = 0;
+    }
+}
+
+
+
+
+function updateTimer() {
+    if (timeLeft > 0 && !gameOver) {
+        timeLeft--;
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerText.setText('Time: ' + minutes + ':' + (seconds < 10 ? '0' : '') + seconds);
+
+        if (timeLeft <= 0) {
+            gameOver = true;
+            this.scene.start('gameOver');
+        }
+    }
+}
+
+function hitBomb(player, _bomb) {
+    lives--;
+    score = 0;
+    livesText.setText('Lives: ' + lives);
+    scoreText.setText('Score: ' + score);
+
+    if (lives <= 0) {
+        this.physics.pause();
+        player.setTint(0xff0000);
+        player.anims.play('turn');
+        gameOver = true;
+        this.gameMusic.stop();
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.start('gameOver');
+        });
+    } else {
+        player.setPosition(200, 700);
+        player.setVelocity(0, 0);
+        player.anims.play('turn');
+        bombs.clear(true, true);
+    }
+}
